@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Plus, Trash2, Sparkles, Upload, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -27,6 +27,13 @@ const CreateSet = () => {
   ]);
   const [generatingIndex, setGeneratingIndex] = useState<number | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const debounceTimers = useRef<Record<string, NodeJS.Timeout>>({});
+
+  useEffect(() => {
+    return () => {
+      Object.values(debounceTimers.current).forEach(timer => clearTimeout(timer));
+    };
+  }, []);
 
   const addCard = () => {
     setCards([...cards, { id: crypto.randomUUID(), front: '', back: '', card_type: 'term' }]);
@@ -40,6 +47,23 @@ const CreateSet = () => {
 
   const updateCard = (id: string, field: keyof CardInput, value: string | CardType) => {
     setCards(cards.map(c => c.id === id ? { ...c, [field]: value } : c));
+    
+    // Auto-generate definition when user stops typing in front field
+    if (field === 'front' && typeof value === 'string') {
+      const card = cards.find(c => c.id === id);
+      if (debounceTimers.current[id]) {
+        clearTimeout(debounceTimers.current[id]);
+      }
+      
+      if (value.trim() && card && !card.back.trim()) {
+        debounceTimers.current[id] = setTimeout(() => {
+          const index = cards.findIndex(c => c.id === id);
+          if (index !== -1) {
+            generateDefinition(index);
+          }
+        }, 1500);
+      }
+    }
   };
 
   const generateDefinition = async (index: number) => {
@@ -58,7 +82,6 @@ const CreateSet = () => {
       if (error) throw error;
 
       updateCard(card.id, 'back', data.definition);
-      toast({ title: 'Definition generated!' });
     } catch (error) {
       console.error(error);
       toast({ title: 'Failed to generate definition', variant: 'destructive' });
