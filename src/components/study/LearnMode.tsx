@@ -1,4 +1,4 @@
-import { useState, useEffect, memo } from 'react';
+import { useState, useEffect, memo, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/types/flashcard';
@@ -22,6 +22,7 @@ const LearnMode = memo(({ cards, setId }: LearnModeProps) => {
   const [selectedOption, setSelectedOption] = useState<string | null>(null);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [inputKey, setInputKey] = useState(0);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     startSession();
@@ -42,6 +43,15 @@ const LearnMode = memo(({ cards, setId }: LearnModeProps) => {
       return () => clearTimeout(timer);
     }
   }, [showResult, isCorrect]);
+
+  useEffect(() => {
+    // Focus input on mobile when question type is typing and not showing result
+    if (questionType === 'typing' && !showResult) {
+      setTimeout(() => {
+        inputRef.current?.focus();
+      }, 100);
+    }
+  }, [questionType, showResult, inputKey]);
 
   const startSession = async () => {
     const { data } = await supabase
@@ -206,6 +216,7 @@ const LearnMode = memo(({ cards, setId }: LearnModeProps) => {
             ) : (
               <>
                 <Input
+                  ref={inputRef}
                   key={inputKey}
                   value={userAnswer}
                   onChange={(e) => setUserAnswer(e.target.value)}

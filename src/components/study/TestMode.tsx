@@ -1,4 +1,4 @@
-import { useState, useEffect, memo } from 'react';
+import { useState, useEffect, memo, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/types/flashcard';
@@ -21,6 +21,7 @@ const TestMode = memo(({ cards, setId }: TestModeProps) => {
   const [mcqOptions, setMcqOptions] = useState<string[]>([]);
   const [selectedOption, setSelectedOption] = useState<string | null>(null);
   const [isTransitioning, setIsTransitioning] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     startSession();
@@ -41,6 +42,15 @@ const TestMode = memo(({ cards, setId }: TestModeProps) => {
       return () => clearTimeout(timer);
     }
   }, [showResult, isCorrect]);
+
+  useEffect(() => {
+    // Focus input on mobile when question type is typing and not showing result
+    if (questionType === 'typing' && !showResult) {
+      setTimeout(() => {
+        inputRef.current?.focus();
+      }, 100);
+    }
+  }, [questionType, showResult, currentIndex]);
 
   const startSession = async () => {
     const { data } = await supabase
@@ -210,6 +220,7 @@ const TestMode = memo(({ cards, setId }: TestModeProps) => {
             ) : (
               <>
                 <Input
+                  ref={inputRef}
                   value={userAnswer}
                   onChange={(e) => setUserAnswer(e.target.value)}
                   onKeyPress={(e) => e.key === 'Enter' && checkAnswer()}
