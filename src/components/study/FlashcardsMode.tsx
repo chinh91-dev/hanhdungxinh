@@ -14,19 +14,35 @@ const FlashcardsMode = memo(({ cards }: FlashcardsModeProps) => {
   const [studyCards, setStudyCards] = useState(cards);
   const [touchStart, setTouchStart] = useState(0);
   const [touchEnd, setTouchEnd] = useState(0);
+  const [swipeOffset, setSwipeOffset] = useState(0);
+  const [isAnimating, setIsAnimating] = useState(false);
 
   useEffect(() => {
     setStudyCards(cards);
   }, [cards]);
 
   const handleNext = () => {
-    setIsFlipped(false);
-    setCurrentIndex((prev) => (prev + 1) % studyCards.length);
+    if (isAnimating) return;
+    setIsAnimating(true);
+    setSwipeOffset(-400);
+    setTimeout(() => {
+      setIsFlipped(false);
+      setCurrentIndex((prev) => (prev + 1) % studyCards.length);
+      setSwipeOffset(0);
+      setIsAnimating(false);
+    }, 300);
   };
 
   const handlePrev = () => {
-    setIsFlipped(false);
-    setCurrentIndex((prev) => (prev - 1 + studyCards.length) % studyCards.length);
+    if (isAnimating) return;
+    setIsAnimating(true);
+    setSwipeOffset(400);
+    setTimeout(() => {
+      setIsFlipped(false);
+      setCurrentIndex((prev) => (prev - 1 + studyCards.length) % studyCards.length);
+      setSwipeOffset(0);
+      setIsAnimating(false);
+    }, 300);
   };
 
   const handleShuffle = () => {
@@ -41,17 +57,26 @@ const FlashcardsMode = memo(({ cards }: FlashcardsModeProps) => {
   };
 
   const handleTouchMove = (e: React.TouchEvent) => {
-    setTouchEnd(e.targetTouches[0].clientX);
+    const currentTouch = e.targetTouches[0].clientX;
+    setTouchEnd(currentTouch);
+    if (touchStart) {
+      const diff = currentTouch - touchStart;
+      setSwipeOffset(diff);
+    }
   };
 
   const handleTouchEnd = () => {
-    if (!touchStart || !touchEnd) return;
+    if (!touchStart || !touchEnd) {
+      setSwipeOffset(0);
+      return;
+    }
     
     const distance = touchStart - touchEnd;
-    const minSwipeDistance = 50;
+    const minSwipeDistance = 80;
     
     if (Math.abs(distance) < minSwipeDistance) {
       // Small movement - treat as tap to flip
+      setSwipeOffset(0);
       setIsFlipped(!isFlipped);
     } else if (distance > 0) {
       // Swiped left - go to next card
@@ -95,7 +120,7 @@ const FlashcardsMode = memo(({ cards }: FlashcardsModeProps) => {
         </Button>
       </div>
 
-      <div className="relative h-96 perspective-1000">
+      <div className="relative h-96 perspective-1000 overflow-hidden">
         <div
           onTouchStart={handleTouchStart}
           onTouchMove={handleTouchMove}
@@ -106,10 +131,15 @@ const FlashcardsMode = memo(({ cards }: FlashcardsModeProps) => {
               setIsFlipped(!isFlipped);
             }
           }}
-          className={`w-full h-full transition-transform duration-500 cursor-pointer preserve-3d ${
+          className={`w-full h-full cursor-pointer preserve-3d ${
             isFlipped ? 'rotate-y-180' : ''
           }`}
-          style={{ transformStyle: 'preserve-3d' }}
+          style={{ 
+            transformStyle: 'preserve-3d',
+            transform: `translateX(${swipeOffset}px) rotateY(${isFlipped ? '180deg' : '0deg'}) rotateZ(${swipeOffset * 0.02}deg)`,
+            transition: isAnimating || (!touchStart && swipeOffset === 0) ? 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)' : 'none',
+            opacity: Math.max(0.5, 1 - Math.abs(swipeOffset) / 500)
+          }}
         >
           <div className="absolute w-full h-full backface-hidden bg-card border-2 border-primary rounded-lg p-8 flex items-center justify-center">
             <div className="text-center">
