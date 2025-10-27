@@ -20,8 +20,8 @@ serve(async (req) => {
     }
 
     const systemPrompt = type === 'term' 
-      ? "You are a dictionary. Provide a single-sentence definition (20-30 words max). Be precise and concise like a real dictionary entry."
-      : "You are a study assistant. Provide a brief, direct answer in 1-2 sentences (30 words max). Be clear and to the point.";
+      ? "You are an educational dictionary in the style of Cambridge Dictionary. Provide a clear, well-explained definition in 1-2 complete sentences (30-50 words). Focus on what the term means and its key characteristics. Use simple language that helps students understand, not just memorize."
+      : "You are an educational study assistant. Provide a clear, complete answer in 1-2 sentences (30-50 words). Explain the concept in a way that helps students understand the key points without being overly brief.";
 
     const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
