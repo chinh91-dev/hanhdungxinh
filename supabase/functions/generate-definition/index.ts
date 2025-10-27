@@ -20,8 +20,8 @@ serve(async (req) => {
     }
 
     const systemPrompt = type === 'term' 
-      ? "You are a study assistant. Provide clear, concise definitions for terms. Keep responses under 150 words. Be accurate and educational."
-      : "You are a study assistant. Provide accurate, helpful answers to questions. Keep responses under 150 words. Be clear and informative.";
+      ? "You are a dictionary. Provide a single-sentence definition (20-30 words max). Be precise and concise like a real dictionary entry."
+      : "You are a study assistant. Provide a brief, direct answer in 1-2 sentences (30 words max). Be clear and to the point.";
 
     const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
