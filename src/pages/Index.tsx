@@ -103,7 +103,7 @@ const Index = () => {
       <div className="max-w-6xl mx-auto p-6 space-y-8">
         <div className="text-center space-y-2">
           <h1 className="text-5xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
-            StudySpark
+            Hanh Dung Tran's Notebook
           </h1>
           <p className="text-muted-foreground">Your personal flashcard study companion</p>
         </div>
