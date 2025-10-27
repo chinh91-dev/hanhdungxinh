@@ -17,11 +17,11 @@ const LearnMode = memo(({ cards, setId }: LearnModeProps) => {
   const [isCorrect, setIsCorrect] = useState(false);
   const [correctCount, setCorrectCount] = useState(0);
   const [sessionId, setSessionId] = useState<string | null>(null);
-  const [questionType, setQuestionType] = useState<'mcq' | 'typing'>('typing');
   const [mcqOptions, setMcqOptions] = useState<string[]>([]);
   const [selectedOption, setSelectedOption] = useState<string | null>(null);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [inputKey, setInputKey] = useState(0);
+  const [answerMethod, setAnswerMethod] = useState<'typing' | 'mcq' | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -45,13 +45,13 @@ const LearnMode = memo(({ cards, setId }: LearnModeProps) => {
   }, [showResult, isCorrect]);
 
   useEffect(() => {
-    // Focus input on mobile when question type is typing and not showing result
-    if (questionType === 'typing' && !showResult) {
+    // Focus input when not showing result
+    if (!showResult) {
       setTimeout(() => {
         inputRef.current?.focus();
       }, 100);
     }
-  }, [questionType, showResult, inputKey]);
+  }, [showResult, inputKey]);
 
   const startSession = async () => {
     const { data } = await supabase
@@ -77,19 +77,17 @@ const LearnMode = memo(({ cards, setId }: LearnModeProps) => {
 
   const prepareQuestion = (index: number) => {
     const card = cards[index];
-    // Determine question type - if we have at least 4 cards, 50% chance of MCQ
-    const shouldBeMCQ = cards.length >= 4 && Math.random() < 0.5;
-    
-    if (shouldBeMCQ) {
-      setQuestionType('mcq');
+    // Always generate MCQ options if we have at least 4 cards
+    if (cards.length >= 4) {
       setMcqOptions(generateMCQOptions(card.front, card.id));
     } else {
-      setQuestionType('typing');
       setMcqOptions([]);
     }
   };
 
   const checkAnswer = () => {
+    if (showResult) return; // Prevent double submission
+    setAnswerMethod('typing');
     const correct = fuzzyMatch(userAnswer.trim().toLowerCase(), cards[currentIndex].front.toLowerCase());
     setIsCorrect(correct);
     setShowResult(true);
@@ -97,6 +95,8 @@ const LearnMode = memo(({ cards, setId }: LearnModeProps) => {
   };
 
   const handleMCQAnswer = (option: string) => {
+    if (showResult) return; // Prevent double submission
+    setAnswerMethod('mcq');
     setSelectedOption(option);
     const correct = option === cards[currentIndex].front;
     setIsCorrect(correct);
@@ -164,6 +164,7 @@ const LearnMode = memo(({ cards, setId }: LearnModeProps) => {
     setUserAnswer('');
     setSelectedOption(null);
     setShowResult(false);
+    setAnswerMethod(null);
     setInputKey(prev => prev + 1);
     
     if (nextIndex < cards.length) {
@@ -200,40 +201,58 @@ const LearnMode = memo(({ cards, setId }: LearnModeProps) => {
 
         {!showResult ? (
           <div className="space-y-4">
-            {questionType === 'mcq' ? (
-              <div className="grid grid-cols-1 gap-3">
-                {mcqOptions.map((option, index) => (
-                  <Button
-                    key={index}
-                    onClick={() => handleMCQAnswer(option)}
-                    variant="outline"
-                    className="h-auto py-4 px-6 text-left justify-start whitespace-normal"
-                  >
-                    {option}
-                  </Button>
-                ))}
-              </div>
-            ) : (
+            <div className="space-y-3">
+              <Input
+                ref={inputRef}
+                key={inputKey}
+                value={userAnswer}
+                onChange={(e) => setUserAnswer(e.target.value)}
+                onKeyPress={(e) => e.key === 'Enter' && userAnswer.trim() && checkAnswer()}
+                placeholder="Type your answer..."
+                autoFocus
+              />
+              <Button onClick={checkAnswer} disabled={!userAnswer.trim()} className="w-full">
+                Submit Answer
+              </Button>
+            </div>
+
+            {mcqOptions.length > 0 && (
               <>
-                <Input
-                  ref={inputRef}
-                  key={inputKey}
-                  value={userAnswer}
-                  onChange={(e) => setUserAnswer(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && checkAnswer()}
-                  placeholder="Type your answer..."
-                  autoFocus
-                />
-                <Button onClick={checkAnswer} disabled={!userAnswer.trim()}>
-                  Check Answer
-                </Button>
+                <div className="relative">
+                  <div className="absolute inset-0 flex items-center">
+                    <span className="w-full border-t" />
+                  </div>
+                  <div className="relative flex justify-center text-xs uppercase">
+                    <span className="bg-card px-2 text-muted-foreground">or choose</span>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 gap-3">
+                  {mcqOptions.map((option, index) => (
+                    <Button
+                      key={index}
+                      onClick={() => handleMCQAnswer(option)}
+                      variant="outline"
+                      className="h-auto py-4 px-6 text-left justify-start whitespace-normal"
+                    >
+                      {option}
+                    </Button>
+                  ))}
+                </div>
               </>
             )}
           </div>
         ) : (
           <div className="space-y-4">
-            {questionType === 'mcq' && (
-              <div className="grid grid-cols-1 gap-3 mb-4">
+            {answerMethod === 'typing' && userAnswer && (
+              <div className="p-3 rounded bg-muted">
+                <p className="text-sm text-muted-foreground">Your answer:</p>
+                <p className="text-lg font-medium">{userAnswer}</p>
+              </div>
+            )}
+
+            {mcqOptions.length > 0 && (
+              <div className="grid grid-cols-1 gap-3">
                 {mcqOptions.map((option, index) => {
                   const isSelected = option === selectedOption;
                   const isCorrectOption = option === currentCard.front;
@@ -277,7 +296,7 @@ const LearnMode = memo(({ cards, setId }: LearnModeProps) => {
               )}
             </div>
             
-            {questionType === 'typing' && (
+            {!isCorrect && (
               <div>
                 <p className="text-sm text-muted-foreground">Correct answer:</p>
                 <p className="text-lg font-medium">{currentCard.front}</p>
