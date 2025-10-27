@@ -20,6 +20,7 @@ const TestMode = ({ cards, setId }: TestModeProps) => {
   const [questionType, setQuestionType] = useState<'mcq' | 'typing'>('typing');
   const [mcqOptions, setMcqOptions] = useState<string[]>([]);
   const [selectedOption, setSelectedOption] = useState<string | null>(null);
+  const [isTransitioning, setIsTransitioning] = useState(false);
 
   useEffect(() => {
     startSession();
@@ -31,8 +32,12 @@ const TestMode = ({ cards, setId }: TestModeProps) => {
   useEffect(() => {
     if (showResult && isCorrect) {
       const timer = setTimeout(() => {
-        handleNext();
-      }, 1000);
+        setIsTransitioning(true);
+        setTimeout(() => {
+          handleNext();
+          setIsTransitioning(false);
+        }, 300);
+      }, 800);
       return () => clearTimeout(timer);
     }
   }, [showResult, isCorrect]);
@@ -181,7 +186,7 @@ const TestMode = ({ cards, setId }: TestModeProps) => {
         </div>
       </div>
 
-      <div className="bg-card border rounded-lg p-8">
+      <div className={`bg-card border rounded-lg p-8 transition-opacity duration-300 ${isTransitioning ? 'opacity-0' : 'opacity-100'}`}>
         <div className="text-sm uppercase text-muted-foreground mb-2">
           {currentCard.card_type === 'term' ? 'Definition' : 'Answer'}
         </div>
