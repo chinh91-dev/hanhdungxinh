@@ -17,8 +17,8 @@ export default defineConfig(({ mode }) => ({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'robots.txt', 'apple-touch-icon.png'],
       manifest: {
-        name: 'StudySpark Flashcards',
-        short_name: 'StudySpark',
+        name: "Hanh Dung Tran's Notebook",
+        short_name: "HD Notebook",
         description: 'AI-powered flashcard app for effective learning',
         theme_color: '#ffffff',
         background_color: '#ffffff',
