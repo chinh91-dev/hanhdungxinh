@@ -180,7 +180,7 @@ const Index = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {sets.map((set) => (
               <Card key={set.id} className="cursor-pointer hover:shadow-lg transition-shadow group relative" onClick={() => navigate(`/study/${set.id}`)}>
-                <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-10 flex gap-1">
+                <div className="absolute top-2 right-2 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity z-10 flex gap-1">
                   <Button
                     variant="ghost"
                     size="icon"

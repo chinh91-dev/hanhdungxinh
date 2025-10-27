@@ -50,9 +50,10 @@ const FlashcardsMode = memo(({ cards }: FlashcardsModeProps) => {
     const distance = touchStart - touchEnd;
     const minSwipeDistance = 50;
     
-    if (Math.abs(distance) < minSwipeDistance) return;
-    
-    if (distance > 0) {
+    if (Math.abs(distance) < minSwipeDistance) {
+      // Small movement - treat as tap to flip
+      setIsFlipped(!isFlipped);
+    } else if (distance > 0) {
       // Swiped left - go to next card
       handleNext();
     } else {
@@ -96,10 +97,15 @@ const FlashcardsMode = memo(({ cards }: FlashcardsModeProps) => {
 
       <div className="relative h-96 perspective-1000">
         <div
-          onClick={() => setIsFlipped(!isFlipped)}
           onTouchStart={handleTouchStart}
           onTouchMove={handleTouchMove}
           onTouchEnd={handleTouchEnd}
+          onClick={(e) => {
+            // Only flip on click if not on mobile (no touch events)
+            if (!('ontouchstart' in window)) {
+              setIsFlipped(!isFlipped);
+            }
+          }}
           className={`w-full h-full transition-transform duration-500 cursor-pointer preserve-3d ${
             isFlipped ? 'rotate-y-180' : ''
           }`}
