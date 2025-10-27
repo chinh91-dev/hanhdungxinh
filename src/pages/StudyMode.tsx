@@ -8,6 +8,7 @@ import { Card } from '@/types/flashcard';
 import FlashcardsMode from '@/components/study/FlashcardsMode';
 import LearnMode from '@/components/study/LearnMode';
 import SpacedMode from '@/components/study/SpacedMode';
+import TestMode from '@/components/study/TestMode';
 
 const StudyMode = () => {
   const { setId } = useParams();
@@ -69,9 +70,10 @@ const StudyMode = () => {
         </div>
 
         <Tabs defaultValue="flashcards" className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="flashcards">Flashcards</TabsTrigger>
             <TabsTrigger value="learn">Learn</TabsTrigger>
+            <TabsTrigger value="test">Test</TabsTrigger>
             <TabsTrigger value="spaced">Spaced Rep</TabsTrigger>
           </TabsList>
 
@@ -81,6 +83,10 @@ const StudyMode = () => {
 
           <TabsContent value="learn" className="mt-6">
             <LearnMode cards={cards} setId={setId!} />
+          </TabsContent>
+
+          <TabsContent value="test" className="mt-6">
+            <TestMode cards={cards} setId={setId!} />
           </TabsContent>
 
           <TabsContent value="spaced" className="mt-6">

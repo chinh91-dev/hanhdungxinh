@@ -5,12 +5,12 @@ import { Card } from '@/types/flashcard';
 import { Check, X } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 
-interface LearnModeProps {
+interface TestModeProps {
   cards: Card[];
   setId: string;
 }
 
-const LearnMode = ({ cards, setId }: LearnModeProps) => {
+const TestMode = ({ cards, setId }: TestModeProps) => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [userAnswer, setUserAnswer] = useState('');
   const [showResult, setShowResult] = useState(false);
@@ -31,7 +31,7 @@ const LearnMode = ({ cards, setId }: LearnModeProps) => {
   const startSession = async () => {
     const { data } = await supabase
       .from('study_sessions')
-      .insert({ set_id: setId, mode: 'learn' })
+      .insert({ set_id: setId, mode: 'test' })
       .select()
       .single();
     if (data) setSessionId(data.id);
@@ -52,7 +52,6 @@ const LearnMode = ({ cards, setId }: LearnModeProps) => {
 
   const prepareQuestion = (index: number) => {
     const card = cards[index];
-    // Determine question type - if we have at least 4 cards, 50% chance of MCQ
     const shouldBeMCQ = cards.length >= 4 && Math.random() < 0.5;
     
     if (shouldBeMCQ) {
@@ -119,7 +118,6 @@ const LearnMode = ({ cards, setId }: LearnModeProps) => {
 
   const handleNext = async () => {
     if (currentIndex === cards.length - 1) {
-      // End session
       const accuracy = (correctCount / cards.length) * 100;
       if (sessionId) {
         await supabase
@@ -149,11 +147,14 @@ const LearnMode = ({ cards, setId }: LearnModeProps) => {
     const accuracy = Math.round((correctCount / cards.length) * 100);
     return (
       <div className="text-center space-y-4 p-8">
-        <h2 className="text-3xl font-bold">Session Complete!</h2>
-        <p className="text-xl">
-          Score: {correctCount}/{cards.length} ({accuracy}%)
+        <h2 className="text-3xl font-bold">Test Complete!</h2>
+        <div className="text-6xl font-bold text-primary my-6">
+          {correctCount}/{cards.length}
+        </div>
+        <p className="text-xl text-muted-foreground">
+          Your Score: {accuracy}%
         </p>
-        <Button onClick={() => window.location.reload()}>Study Again</Button>
+        <Button onClick={() => window.location.reload()}>Take Test Again</Button>
       </div>
     );
   }
@@ -162,8 +163,13 @@ const LearnMode = ({ cards, setId }: LearnModeProps) => {
 
   return (
     <div className="space-y-6">
-      <div className="text-sm text-muted-foreground">
-        Question {currentIndex + 1} of {cards.length}
+      <div className="flex justify-between items-center">
+        <div className="text-sm text-muted-foreground">
+          Question {currentIndex + 1} of {cards.length}
+        </div>
+        <div className="text-sm font-medium">
+          Score: {correctCount}/{currentIndex + (showResult ? 1 : 0)}
+        </div>
       </div>
 
       <div className="bg-card border rounded-lg p-8">
@@ -262,12 +268,8 @@ const LearnMode = ({ cards, setId }: LearnModeProps) => {
           </div>
         )}
       </div>
-
-      <div className="text-center text-sm text-muted-foreground">
-        Current Score: {correctCount}/{currentIndex + (showResult ? 1 : 0)}
-      </div>
     </div>
   );
 };
 
-export default LearnMode;
+export default TestMode;
