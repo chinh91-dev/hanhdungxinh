@@ -46,29 +46,44 @@ const CreateSet = () => {
   };
 
   const updateCard = (id: string, field: keyof CardInput, value: string | CardType) => {
-    setCards(cards.map(c => c.id === id ? { ...c, [field]: value } : c));
-    
-    // Auto-generate definition when user stops typing in front field
-    if (field === 'front' && typeof value === 'string') {
-      const card = cards.find(c => c.id === id);
-      if (debounceTimers.current[id]) {
-        clearTimeout(debounceTimers.current[id]);
+    setCards(prevCards => {
+      const updatedCards = prevCards.map(c => c.id === id ? { ...c, [field]: value } : c);
+      
+      // Auto-generate definition when user stops typing in front field
+      if (field === 'front' && typeof value === 'string') {
+        const card = updatedCards.find(c => c.id === id);
+        if (debounceTimers.current[id]) {
+          clearTimeout(debounceTimers.current[id]);
+        }
+        
+        if (value.trim() && card && !card.back.trim()) {
+          debounceTimers.current[id] = setTimeout(() => {
+            setCards(currentCards => {
+              const index = currentCards.findIndex(c => c.id === id);
+              if (index !== -1) {
+                generateDefinition(index);
+              }
+              return currentCards;
+            });
+          }, 1500);
+        }
       }
       
-      if (value.trim() && card && !card.back.trim()) {
-        debounceTimers.current[id] = setTimeout(() => {
-          const index = cards.findIndex(c => c.id === id);
-          if (index !== -1) {
-            generateDefinition(index);
-          }
-        }, 1500);
-      }
-    }
+      return updatedCards;
+    });
   };
 
   const generateDefinition = async (index: number) => {
-    const card = cards[index];
-    if (!card.front.trim()) {
+    let cardToGenerate: CardInput | null = null;
+    
+    setCards(prevCards => {
+      if (index >= 0 && index < prevCards.length) {
+        cardToGenerate = prevCards[index];
+      }
+      return prevCards;
+    });
+
+    if (!cardToGenerate || !cardToGenerate.front.trim()) {
       toast({ title: 'Please enter a term or question first', variant: 'destructive' });
       return;
     }
@@ -76,12 +91,14 @@ const CreateSet = () => {
     setGeneratingIndex(index);
     try {
       const { data, error } = await supabase.functions.invoke('generate-definition', {
-        body: { text: card.front, type: card.card_type }
+        body: { text: cardToGenerate.front, type: cardToGenerate.card_type }
       });
 
       if (error) throw error;
 
-      updateCard(card.id, 'back', data.definition);
+      setCards(prevCards => 
+        prevCards.map(c => c.id === cardToGenerate!.id ? { ...c, back: data.definition } : c)
+      );
     } catch (error) {
       console.error(error);
       toast({ title: 'Failed to generate definition', variant: 'destructive' });
