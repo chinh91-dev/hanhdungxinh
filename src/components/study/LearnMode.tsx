@@ -17,9 +17,15 @@ const LearnMode = ({ cards, setId }: LearnModeProps) => {
   const [isCorrect, setIsCorrect] = useState(false);
   const [correctCount, setCorrectCount] = useState(0);
   const [sessionId, setSessionId] = useState<string | null>(null);
+  const [questionType, setQuestionType] = useState<'mcq' | 'typing'>('typing');
+  const [mcqOptions, setMcqOptions] = useState<string[]>([]);
+  const [selectedOption, setSelectedOption] = useState<string | null>(null);
 
   useEffect(() => {
     startSession();
+    if (cards.length > 0) {
+      prepareQuestion(0);
+    }
   }, []);
 
   const startSession = async () => {
@@ -31,8 +37,43 @@ const LearnMode = ({ cards, setId }: LearnModeProps) => {
     if (data) setSessionId(data.id);
   };
 
+  const generateMCQOptions = (correctAnswer: string, currentCardId: string): string[] => {
+    const wrongAnswers = cards
+      .filter(c => c.id !== currentCardId && c.back !== correctAnswer)
+      .map(c => c.back)
+      .sort(() => Math.random() - 0.5)
+      .slice(0, 3);
+    
+    const options = [...wrongAnswers, correctAnswer]
+      .sort(() => Math.random() - 0.5);
+    
+    return options;
+  };
+
+  const prepareQuestion = (index: number) => {
+    const card = cards[index];
+    // Determine question type - if we have at least 4 cards, 50% chance of MCQ
+    const shouldBeMCQ = cards.length >= 4 && Math.random() < 0.5;
+    
+    if (shouldBeMCQ) {
+      setQuestionType('mcq');
+      setMcqOptions(generateMCQOptions(card.back, card.id));
+    } else {
+      setQuestionType('typing');
+      setMcqOptions([]);
+    }
+  };
+
   const checkAnswer = () => {
     const correct = fuzzyMatch(userAnswer.trim().toLowerCase(), cards[currentIndex].back.toLowerCase());
+    setIsCorrect(correct);
+    setShowResult(true);
+    if (correct) setCorrectCount(correctCount + 1);
+  };
+
+  const handleMCQAnswer = (option: string) => {
+    setSelectedOption(option);
+    const correct = option === cards[currentIndex].back;
     setIsCorrect(correct);
     setShowResult(true);
     if (correct) setCorrectCount(correctCount + 1);
@@ -93,9 +134,15 @@ const LearnMode = ({ cards, setId }: LearnModeProps) => {
       }
     }
 
-    setCurrentIndex(currentIndex + 1);
+    const nextIndex = currentIndex + 1;
+    setCurrentIndex(nextIndex);
     setUserAnswer('');
+    setSelectedOption(null);
     setShowResult(false);
+    
+    if (nextIndex < cards.length) {
+      prepareQuestion(nextIndex);
+    }
   };
 
   if (currentIndex >= cards.length) {
@@ -127,19 +174,67 @@ const LearnMode = ({ cards, setId }: LearnModeProps) => {
 
         {!showResult ? (
           <div className="space-y-4">
-            <Input
-              value={userAnswer}
-              onChange={(e) => setUserAnswer(e.target.value)}
-              onKeyPress={(e) => e.key === 'Enter' && checkAnswer()}
-              placeholder="Type your answer..."
-              autoFocus
-            />
-            <Button onClick={checkAnswer} disabled={!userAnswer.trim()}>
-              Check Answer
-            </Button>
+            {questionType === 'mcq' ? (
+              <div className="grid grid-cols-1 gap-3">
+                {mcqOptions.map((option, index) => (
+                  <Button
+                    key={index}
+                    onClick={() => handleMCQAnswer(option)}
+                    variant="outline"
+                    className="h-auto py-4 px-6 text-left justify-start whitespace-normal"
+                  >
+                    {option}
+                  </Button>
+                ))}
+              </div>
+            ) : (
+              <>
+                <Input
+                  value={userAnswer}
+                  onChange={(e) => setUserAnswer(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && checkAnswer()}
+                  placeholder="Type your answer..."
+                  autoFocus
+                />
+                <Button onClick={checkAnswer} disabled={!userAnswer.trim()}>
+                  Check Answer
+                </Button>
+              </>
+            )}
           </div>
         ) : (
           <div className="space-y-4">
+            {questionType === 'mcq' && (
+              <div className="grid grid-cols-1 gap-3 mb-4">
+                {mcqOptions.map((option, index) => {
+                  const isSelected = option === selectedOption;
+                  const isCorrectOption = option === currentCard.back;
+                  
+                  return (
+                    <Button
+                      key={index}
+                      variant="outline"
+                      disabled
+                      className={`h-auto py-4 px-6 text-left justify-start whitespace-normal ${
+                        isSelected && isCorrect
+                          ? 'bg-green-100 dark:bg-green-900 border-green-600'
+                          : isSelected && !isCorrect
+                          ? 'bg-red-100 dark:bg-red-900 border-red-600'
+                          : isCorrectOption
+                          ? 'bg-green-100 dark:bg-green-900 border-green-600'
+                          : ''
+                      }`}
+                    >
+                      {option}
+                      {isSelected && isCorrect && <Check className="ml-2 h-4 w-4 inline" />}
+                      {isSelected && !isCorrect && <X className="ml-2 h-4 w-4 inline" />}
+                      {!isSelected && isCorrectOption && <Check className="ml-2 h-4 w-4 inline" />}
+                    </Button>
+                  );
+                })}
+              </div>
+            )}
+            
             <div className={`flex items-center gap-2 p-4 rounded ${isCorrect ? 'bg-green-100 dark:bg-green-900' : 'bg-red-100 dark:bg-red-900'}`}>
               {isCorrect ? (
                 <>
@@ -153,10 +248,14 @@ const LearnMode = ({ cards, setId }: LearnModeProps) => {
                 </>
               )}
             </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Correct answer:</p>
-              <p className="text-lg font-medium">{currentCard.back}</p>
-            </div>
+            
+            {questionType === 'typing' && (
+              <div>
+                <p className="text-sm text-muted-foreground">Correct answer:</p>
+                <p className="text-lg font-medium">{currentCard.back}</p>
+              </div>
+            )}
+            
             <Button onClick={handleNext}>
               {currentIndex === cards.length - 1 ? 'Finish' : 'Next Card'}
             </Button>
