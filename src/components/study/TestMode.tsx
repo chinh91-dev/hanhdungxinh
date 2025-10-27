@@ -28,6 +28,15 @@ const TestMode = ({ cards, setId }: TestModeProps) => {
     }
   }, []);
 
+  useEffect(() => {
+    if (showResult && isCorrect) {
+      const timer = setTimeout(() => {
+        handleNext();
+      }, 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [showResult, isCorrect]);
+
   const startSession = async () => {
     const { data } = await supabase
       .from('study_sessions')
