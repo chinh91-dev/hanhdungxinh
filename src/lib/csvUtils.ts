@@ -28,25 +28,19 @@ export function parseCSV(csvText: string): { front: string; back: string; card_t
   const lines = csvText.split('\n').filter(line => line.trim());
   const cards: { front: string; back: string; card_type: CardType }[] = [];
 
-  // Skip header row
-  for (let i = 1; i < lines.length; i++) {
-    const match = lines[i].match(/(?:^|,)("(?:[^"]|"")*"|[^,]*)/g);
-    if (!match || match.length < 2) continue;
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i].trim();
+    if (!line) continue;
 
-    const values = match.map(val => {
-      let cleaned = val.replace(/^,/, '').trim();
-      if (cleaned.startsWith('"') && cleaned.endsWith('"')) {
-        cleaned = cleaned.slice(1, -1).replace(/""/g, '"');
-      }
-      return cleaned;
-    });
+    // Split by first comma only
+    const commaIndex = line.indexOf(',');
+    if (commaIndex === -1) continue;
 
-    const front = values[0] || '';
-    const back = values[1] || '';
-    const type = values[2]?.toLowerCase() === 'question' ? 'question' : 'term';
+    const front = line.substring(0, commaIndex).trim();
+    const back = line.substring(commaIndex + 1).trim();
 
     if (front && back) {
-      cards.push({ front, back, card_type: type });
+      cards.push({ front, back, card_type: 'term' });
     }
   }
 

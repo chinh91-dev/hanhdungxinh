@@ -104,7 +104,7 @@ const CreateSet = () => {
   const handleImportCSV = () => {
     const input = document.createElement('input');
     input.type = 'file';
-    input.accept = '.csv';
+    input.accept = '.txt';
     input.onchange = async (e) => {
       const file = (e.target as HTMLInputElement).files?.[0];
       if (!file) return;
@@ -200,7 +200,7 @@ const CreateSet = () => {
           <div className="flex gap-2">
             <Button onClick={handleImportCSV} variant="outline" size="sm">
               <Upload className="mr-2 h-4 w-4" />
-              Import CSV
+              Import Text
             </Button>
             <Button onClick={handleExportCSV} variant="outline" size="sm">
               <Download className="mr-2 h-4 w-4" />
