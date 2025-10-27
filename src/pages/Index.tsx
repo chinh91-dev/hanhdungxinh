@@ -1,17 +1,30 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, BookOpen, TrendingUp } from 'lucide-react';
+import { Plus, BookOpen, TrendingUp, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { supabase } from '@/integrations/supabase/client';
 import { FlashcardSet } from '@/types/flashcard';
 import { formatDistanceToNow } from 'date-fns';
+import { toast } from 'sonner';
 
 const Index = () => {
   const navigate = useNavigate();
   const [sets, setSets] = useState<FlashcardSet[]>([]);
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({ totalSets: 0, totalCards: 0, studiedToday: 0 });
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [setToDelete, setSetToDelete] = useState<string | null>(null);
 
   useEffect(() => {
     loadSets();
@@ -52,6 +65,36 @@ const Index = () => {
       });
     } catch (error) {
       console.error(error);
+    }
+  };
+
+  const handleDeleteClick = (setId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setSetToDelete(setId);
+    setDeleteDialogOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!setToDelete) return;
+
+    try {
+      // Delete associated cards first
+      await supabase.from('cards').delete().eq('set_id', setToDelete);
+      
+      // Delete the set
+      const { error } = await supabase.from('sets').delete().eq('id', setToDelete);
+      
+      if (error) throw error;
+
+      toast.success('Set deleted successfully');
+      loadSets();
+      loadStats();
+    } catch (error) {
+      console.error(error);
+      toast.error('Failed to delete set');
+    } finally {
+      setDeleteDialogOpen(false);
+      setSetToDelete(null);
     }
   };
 
@@ -122,7 +165,15 @@ const Index = () => {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {sets.map((set) => (
-              <Card key={set.id} className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => navigate(`/study/${set.id}`)}>
+              <Card key={set.id} className="cursor-pointer hover:shadow-lg transition-shadow group relative" onClick={() => navigate(`/study/${set.id}`)}>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                  onClick={(e) => handleDeleteClick(set.id, e)}
+                >
+                  <Trash2 className="h-4 w-4 text-destructive" />
+                </Button>
                 <CardHeader>
                   <CardTitle className="line-clamp-1">{set.title}</CardTitle>
                   <CardDescription className="line-clamp-2">
@@ -139,6 +190,23 @@ const Index = () => {
             ))}
           </div>
         )}
+
+        <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete Set?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This will permanently delete this flashcard set and all its cards. This action cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={confirmDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                Delete
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </div>
   );
