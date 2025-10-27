@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, BookOpen, TrendingUp, Trash2 } from 'lucide-react';
+import { Plus, BookOpen, TrendingUp, Trash2, Pencil } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
@@ -166,14 +166,25 @@ const Index = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {sets.map((set) => (
               <Card key={set.id} className="cursor-pointer hover:shadow-lg transition-shadow group relative" onClick={() => navigate(`/study/${set.id}`)}>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-10"
-                  onClick={(e) => handleDeleteClick(set.id, e)}
-                >
-                  <Trash2 className="h-4 w-4 text-destructive" />
-                </Button>
+                <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-10 flex gap-1">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      navigate(`/edit/${set.id}`);
+                    }}
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={(e) => handleDeleteClick(set.id, e)}
+                  >
+                    <Trash2 className="h-4 w-4 text-destructive" />
+                  </Button>
+                </div>
                 <CardHeader>
                   <CardTitle className="line-clamp-1">{set.title}</CardTitle>
                   <CardDescription className="line-clamp-2">
