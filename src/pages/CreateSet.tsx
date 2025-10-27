@@ -74,37 +74,31 @@ const CreateSet = () => {
   };
 
   const generateDefinition = async (index: number) => {
-    let cardToGenerate: CardInput | null = null;
-    
     setCards(prevCards => {
-      if (index >= 0 && index < prevCards.length) {
-        cardToGenerate = prevCards[index];
+      const card = prevCards[index];
+      if (!card?.front.trim()) {
+        toast({ title: 'Please enter a term or question first', variant: 'destructive' });
+        return prevCards;
       }
-      return prevCards;
-    });
 
-    if (!cardToGenerate || !cardToGenerate.front.trim()) {
-      toast({ title: 'Please enter a term or question first', variant: 'destructive' });
-      return;
-    }
-
-    setGeneratingIndex(index);
-    try {
-      const { data, error } = await supabase.functions.invoke('generate-definition', {
-        body: { text: cardToGenerate.front, type: cardToGenerate.card_type }
+      setGeneratingIndex(index);
+      
+      supabase.functions.invoke('generate-definition', {
+        body: { text: card.front, type: card.card_type }
+      }).then(({ data, error }) => {
+        if (error) {
+          console.error(error);
+          toast({ title: 'Failed to generate definition', variant: 'destructive' });
+        } else {
+          setCards(currentCards => 
+            currentCards.map(c => c.id === card.id ? { ...c, back: data.definition } : c)
+          );
+        }
+        setGeneratingIndex(null);
       });
 
-      if (error) throw error;
-
-      setCards(prevCards => 
-        prevCards.map(c => c.id === cardToGenerate!.id ? { ...c, back: data.definition } : c)
-      );
-    } catch (error) {
-      console.error(error);
-      toast({ title: 'Failed to generate definition', variant: 'destructive' });
-    } finally {
-      setGeneratingIndex(null);
-    }
+      return prevCards;
+    });
   };
 
   const handleImportCSV = () => {
