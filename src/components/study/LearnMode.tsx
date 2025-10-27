@@ -21,6 +21,7 @@ const LearnMode = memo(({ cards, setId }: LearnModeProps) => {
   const [mcqOptions, setMcqOptions] = useState<string[]>([]);
   const [selectedOption, setSelectedOption] = useState<string | null>(null);
   const [isTransitioning, setIsTransitioning] = useState(false);
+  const [inputKey, setInputKey] = useState(0);
 
   useEffect(() => {
     startSession();
@@ -153,6 +154,7 @@ const LearnMode = memo(({ cards, setId }: LearnModeProps) => {
     setUserAnswer('');
     setSelectedOption(null);
     setShowResult(false);
+    setInputKey(prev => prev + 1);
     
     if (nextIndex < cards.length) {
       prepareQuestion(nextIndex);
@@ -204,6 +206,7 @@ const LearnMode = memo(({ cards, setId }: LearnModeProps) => {
             ) : (
               <>
                 <Input
+                  key={inputKey}
                   value={userAnswer}
                   onChange={(e) => setUserAnswer(e.target.value)}
                   onKeyPress={(e) => e.key === 'Enter' && checkAnswer()}

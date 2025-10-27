@@ -12,6 +12,8 @@ const FlashcardsMode = memo(({ cards }: FlashcardsModeProps) => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
   const [studyCards, setStudyCards] = useState(cards);
+  const [touchStart, setTouchStart] = useState(0);
+  const [touchEnd, setTouchEnd] = useState(0);
 
   useEffect(() => {
     setStudyCards(cards);
@@ -32,6 +34,34 @@ const FlashcardsMode = memo(({ cards }: FlashcardsModeProps) => {
     setStudyCards(shuffled);
     setCurrentIndex(0);
     setIsFlipped(false);
+  };
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    setTouchStart(e.targetTouches[0].clientX);
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    setTouchEnd(e.targetTouches[0].clientX);
+  };
+
+  const handleTouchEnd = () => {
+    if (!touchStart || !touchEnd) return;
+    
+    const distance = touchStart - touchEnd;
+    const minSwipeDistance = 50;
+    
+    if (Math.abs(distance) < minSwipeDistance) return;
+    
+    if (distance > 0) {
+      // Swiped left - go to next card
+      handleNext();
+    } else {
+      // Swiped right - go to previous card
+      handlePrev();
+    }
+    
+    setTouchStart(0);
+    setTouchEnd(0);
   };
 
   useEffect(() => {
@@ -67,6 +97,9 @@ const FlashcardsMode = memo(({ cards }: FlashcardsModeProps) => {
       <div className="relative h-96 perspective-1000">
         <div
           onClick={() => setIsFlipped(!isFlipped)}
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
           className={`w-full h-full transition-transform duration-500 cursor-pointer preserve-3d ${
             isFlipped ? 'rotate-y-180' : ''
           }`}
