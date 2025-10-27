@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, memo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/types/flashcard';
 import { ChevronLeft, ChevronRight, Shuffle } from 'lucide-react';
@@ -8,7 +8,7 @@ interface FlashcardsModeProps {
   setId: string;
 }
 
-const FlashcardsMode = ({ cards }: FlashcardsModeProps) => {
+const FlashcardsMode = memo(({ cards }: FlashcardsModeProps) => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
   const [studyCards, setStudyCards] = useState(cards);
@@ -113,6 +113,8 @@ const FlashcardsMode = ({ cards }: FlashcardsModeProps) => {
       </p>
     </div>
   );
-};
+});
+
+FlashcardsMode.displayName = 'FlashcardsMode';
 
 export default FlashcardsMode;

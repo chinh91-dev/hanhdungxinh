@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -44,6 +44,14 @@ const StudyMode = () => {
     }
   };
 
+  // Memoize study mode components to prevent unnecessary re-renders
+  const studyModes = useMemo(() => ({
+    flashcards: <FlashcardsMode cards={cards} setId={setId!} />,
+    learn: <LearnMode cards={cards} setId={setId!} />,
+    test: <TestMode cards={cards} setId={setId!} />,
+    spaced: <SpacedMode cards={cards} setId={setId!} />,
+  }), [cards, setId]);
+
   if (loading) {
     return <div className="min-h-screen bg-background flex items-center justify-center">Loading...</div>;
   }
@@ -78,19 +86,19 @@ const StudyMode = () => {
           </TabsList>
 
           <TabsContent value="flashcards" className="mt-6">
-            <FlashcardsMode cards={cards} setId={setId!} />
+            {studyModes.flashcards}
           </TabsContent>
 
           <TabsContent value="learn" className="mt-6">
-            <LearnMode cards={cards} setId={setId!} />
+            {studyModes.learn}
           </TabsContent>
 
           <TabsContent value="test" className="mt-6">
-            <TestMode cards={cards} setId={setId!} />
+            {studyModes.test}
           </TabsContent>
 
           <TabsContent value="spaced" className="mt-6">
-            <SpacedMode cards={cards} setId={setId!} />
+            {studyModes.spaced}
           </TabsContent>
         </Tabs>
       </div>

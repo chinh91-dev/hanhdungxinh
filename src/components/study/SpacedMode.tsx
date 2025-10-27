@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, memo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardProgress } from '@/types/flashcard';
 import { supabase } from '@/integrations/supabase/client';
@@ -10,7 +10,7 @@ interface SpacedModeProps {
   setId: string;
 }
 
-const SpacedMode = ({ cards, setId }: SpacedModeProps) => {
+const SpacedMode = memo(({ cards, setId }: SpacedModeProps) => {
   const [dueCards, setDueCards] = useState<(Card & { progress: CardProgress })[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [showAnswer, setShowAnswer] = useState(false);
@@ -204,6 +204,8 @@ const SpacedMode = ({ cards, setId }: SpacedModeProps) => {
       </div>
     </div>
   );
-};
+});
+
+SpacedMode.displayName = 'SpacedMode';
 
 export default SpacedMode;

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, memo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/types/flashcard';
@@ -10,7 +10,7 @@ interface LearnModeProps {
   setId: string;
 }
 
-const LearnMode = ({ cards, setId }: LearnModeProps) => {
+const LearnMode = memo(({ cards, setId }: LearnModeProps) => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [userAnswer, setUserAnswer] = useState('');
   const [showResult, setShowResult] = useState(false);
@@ -282,6 +282,8 @@ const LearnMode = ({ cards, setId }: LearnModeProps) => {
       </div>
     </div>
   );
-};
+});
+
+LearnMode.displayName = 'LearnMode';
 
 export default LearnMode;

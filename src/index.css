@@ -117,5 +117,19 @@ All colors MUST be HSL.
 
   body {
     @apply bg-background text-foreground;
+    /* Optimize mobile scrolling */
+    -webkit-overflow-scrolling: touch;
+    /* Prevent text size adjustment on iOS */
+    -webkit-text-size-adjust: 100%;
+  }
+
+  /* Optimize touch targets for mobile */
+  button, a, input, textarea, select {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Smooth transitions */
+  * {
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
   }
 }

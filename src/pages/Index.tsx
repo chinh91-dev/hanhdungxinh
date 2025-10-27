@@ -40,6 +40,7 @@ const Index = () => {
       if (data) setSets(data);
     } catch (error) {
       console.error(error);
+      toast.error('Failed to load sets');
     } finally {
       setLoading(false);
     }
@@ -47,19 +48,20 @@ const Index = () => {
 
   const loadStats = async () => {
     try {
-      const { data: setsData } = await supabase.from('sets').select('id, card_count');
-      const totalCards = setsData?.reduce((sum, set) => sum + set.card_count, 0) || 0;
+      // Combine queries for better performance
+      const [setsResult, sessionsResult] = await Promise.all([
+        supabase.from('sets').select('id, card_count'),
+        supabase
+          .from('study_sessions')
+          .select('cards_studied')
+          .gte('started_at', new Date(new Date().setHours(0, 0, 0, 0)).toISOString())
+      ]);
 
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const { data: sessionsData } = await supabase
-        .from('study_sessions')
-        .select('cards_studied')
-        .gte('started_at', today.toISOString());
-      const studiedToday = sessionsData?.reduce((sum, s) => sum + s.cards_studied, 0) || 0;
+      const totalCards = setsResult.data?.reduce((sum, set) => sum + set.card_count, 0) || 0;
+      const studiedToday = sessionsResult.data?.reduce((sum, s) => sum + s.cards_studied, 0) || 0;
 
       setStats({
-        totalSets: setsData?.length || 0,
+        totalSets: setsResult.data?.length || 0,
         totalCards,
         studiedToday
       });
@@ -149,7 +151,19 @@ const Index = () => {
         </div>
 
         {loading ? (
-          <div className="text-center py-12">Loading...</div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {[1, 2, 3].map((i) => (
+              <Card key={i} className="animate-pulse">
+                <CardHeader>
+                  <div className="h-6 bg-muted rounded w-3/4 mb-2"></div>
+                  <div className="h-4 bg-muted rounded w-full"></div>
+                </CardHeader>
+                <CardContent>
+                  <div className="h-4 bg-muted rounded w-1/2"></div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
         ) : sets.length === 0 ? (
           <Card className="border-dashed">
             <CardContent className="flex flex-col items-center justify-center py-12">
