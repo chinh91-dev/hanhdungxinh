@@ -1,10 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Plus, Trash2, Sparkles, Upload, Download } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, Sparkles, Upload, Download, Copy } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { CardType } from '@/types/flashcard';
@@ -27,6 +28,10 @@ const CreateSet = () => {
   ]);
   const [generatingIndex, setGeneratingIndex] = useState<number | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
+  const [exportDialogOpen, setExportDialogOpen] = useState(false);
+  const [importText, setImportText] = useState('');
+  const [exportText, setExportText] = useState('');
   const debounceTimers = useRef<Record<string, NodeJS.Timeout>>({});
 
   useEffect(() => {
@@ -101,25 +106,30 @@ const CreateSet = () => {
     });
   };
 
-  const handleImportCSV = () => {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = '.txt';
-    input.onchange = async (e) => {
-      const file = (e.target as HTMLInputElement).files?.[0];
-      if (!file) return;
-
-      const text = await file.text();
-      const imported = parseCSV(text);
-      setCards(imported.map(c => ({ ...c, id: crypto.randomUUID() })));
-      toast({ title: `Imported ${imported.length} cards` });
-    };
-    input.click();
+  const handleImportText = () => {
+    if (!importText.trim()) {
+      toast({ title: 'Please paste some text', variant: 'destructive' });
+      return;
+    }
+    const imported = parseCSV(importText);
+    setCards(imported.map(c => ({ ...c, id: crypto.randomUUID() })));
+    toast({ title: `Imported ${imported.length} cards` });
+    setImportDialogOpen(false);
+    setImportText('');
   };
 
-  const handleExportCSV = () => {
-    exportToCSV(cards.map((c, i) => ({ ...c, set_id: '', order_index: i, created_at: '' })), title || 'untitled');
-    toast({ title: 'Exported to CSV' });
+  const handleExportText = () => {
+    const text = cards
+      .filter(c => c.front.trim() && c.back.trim())
+      .map(c => `${c.front},${c.back}`)
+      .join('\n');
+    setExportText(text);
+    setExportDialogOpen(true);
+  };
+
+  const handleCopyExport = () => {
+    navigator.clipboard.writeText(exportText);
+    toast({ title: 'Copied to clipboard' });
   };
 
   const handleSave = async () => {
@@ -198,13 +208,13 @@ const CreateSet = () => {
           </div>
 
           <div className="flex gap-2">
-            <Button onClick={handleImportCSV} variant="outline" size="sm">
+            <Button onClick={() => setImportDialogOpen(true)} variant="outline" size="sm">
               <Upload className="mr-2 h-4 w-4" />
               Import Text
             </Button>
-            <Button onClick={handleExportCSV} variant="outline" size="sm">
+            <Button onClick={handleExportText} variant="outline" size="sm">
               <Download className="mr-2 h-4 w-4" />
-              Export CSV
+              Export Text
             </Button>
           </div>
 
@@ -282,6 +292,50 @@ const CreateSet = () => {
             </Button>
           </div>
         </div>
+
+        <Dialog open={importDialogOpen} onOpenChange={setImportDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Import Cards</DialogTitle>
+              <DialogDescription>
+                Paste your cards below. Each line should be: word,definition
+              </DialogDescription>
+            </DialogHeader>
+            <Textarea
+              value={importText}
+              onChange={(e) => setImportText(e.target.value)}
+              placeholder="love,a feeling of affection&#10;happy,feeling joy"
+              className="min-h-[200px]"
+            />
+            <div className="flex gap-2">
+              <Button onClick={handleImportText} className="flex-1">Import</Button>
+              <Button onClick={() => setImportDialogOpen(false)} variant="outline">Cancel</Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={exportDialogOpen} onOpenChange={setExportDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Export Cards</DialogTitle>
+              <DialogDescription>
+                Copy the text below to save your cards
+              </DialogDescription>
+            </DialogHeader>
+            <Textarea
+              value={exportText}
+              readOnly
+              className="min-h-[200px]"
+            />
+            <div className="flex gap-2">
+              <Button onClick={handleCopyExport} className="flex-1">
+                <Copy className="mr-2 h-4 w-4" />
+                Copy to Clipboard
+              </Button>
+              <Button onClick={() => setExportDialogOpen(false)} variant="outline">Close</Button>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );
