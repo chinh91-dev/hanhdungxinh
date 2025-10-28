@@ -10,7 +10,12 @@ interface LearnModeProps {
   setId: string;
 }
 
+interface ExtendedCard extends Card {
+  questionMode: 'typing' | 'mcq';
+}
+
 const LearnMode = memo(({ cards, setId }: LearnModeProps) => {
+  const [studyCards, setStudyCards] = useState<ExtendedCard[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [userAnswer, setUserAnswer] = useState('');
   const [showResult, setShowResult] = useState(false);
@@ -21,15 +26,26 @@ const LearnMode = memo(({ cards, setId }: LearnModeProps) => {
   const [selectedOption, setSelectedOption] = useState<string | null>(null);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [inputKey, setInputKey] = useState(0);
-  const [answerMethod, setAnswerMethod] = useState<'typing' | 'mcq' | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
+    // Create extended cards: each card appears twice (once for typing, once for MCQ)
+    const extended: ExtendedCard[] = [];
+    cards.forEach(card => {
+      extended.push({ ...card, questionMode: 'typing' });
+      if (cards.length >= 4) { // Only add MCQ if we have enough cards
+        extended.push({ ...card, questionMode: 'mcq' });
+      }
+    });
+    // Shuffle the cards
+    const shuffled = extended.sort(() => Math.random() - 0.5);
+    setStudyCards(shuffled);
+    
     startSession();
-    if (cards.length > 0) {
-      prepareQuestion(0);
+    if (shuffled.length > 0) {
+      prepareQuestion(0, shuffled);
     }
-  }, []);
+  }, [cards]);
 
   useEffect(() => {
     if (showResult && isCorrect) {
@@ -75,10 +91,9 @@ const LearnMode = memo(({ cards, setId }: LearnModeProps) => {
     return options;
   };
 
-  const prepareQuestion = (index: number) => {
-    const card = cards[index];
-    // Always generate MCQ options if we have at least 4 cards
-    if (cards.length >= 4) {
+  const prepareQuestion = (index: number, cardsToUse: ExtendedCard[] = studyCards) => {
+    const card = cardsToUse[index];
+    if (card.questionMode === 'mcq') {
       setMcqOptions(generateMCQOptions(card.front, card.id));
     } else {
       setMcqOptions([]);
@@ -87,8 +102,7 @@ const LearnMode = memo(({ cards, setId }: LearnModeProps) => {
 
   const checkAnswer = () => {
     if (showResult) return;
-    setAnswerMethod('typing');
-    const correct = fuzzyMatch(userAnswer.trim().toLowerCase(), cards[currentIndex].front.toLowerCase());
+    const correct = fuzzyMatch(userAnswer.trim().toLowerCase(), studyCards[currentIndex].front.toLowerCase());
     setIsCorrect(correct);
     setShowResult(true);
     if (correct) setCorrectCount(correctCount + 1);
@@ -96,9 +110,8 @@ const LearnMode = memo(({ cards, setId }: LearnModeProps) => {
 
   const handleMCQAnswer = (option: string) => {
     if (showResult) return;
-    setAnswerMethod('mcq');
     setSelectedOption(option);
-    const correct = option === cards[currentIndex].front;
+    const correct = option === studyCards[currentIndex].front;
     setIsCorrect(correct);
     setShowResult(true);
     if (correct) setCorrectCount(correctCount + 1);
@@ -143,15 +156,15 @@ const LearnMode = memo(({ cards, setId }: LearnModeProps) => {
   };
 
   const handleNext = async () => {
-    if (currentIndex === cards.length - 1) {
+    if (currentIndex === studyCards.length - 1) {
       // End session
-      const accuracy = (correctCount / cards.length) * 100;
+      const accuracy = (correctCount / studyCards.length) * 100;
       if (sessionId) {
         await supabase
           .from('study_sessions')
           .update({
             ended_at: new Date().toISOString(),
-            cards_studied: cards.length,
+            cards_studied: studyCards.length,
             correct_count: correctCount,
             accuracy
           })
@@ -164,33 +177,36 @@ const LearnMode = memo(({ cards, setId }: LearnModeProps) => {
     setUserAnswer('');
     setSelectedOption(null);
     setShowResult(false);
-    setAnswerMethod(null);
     setInputKey(prev => prev + 1);
     
-    if (nextIndex < cards.length) {
+    if (nextIndex < studyCards.length) {
       prepareQuestion(nextIndex);
     }
   };
 
-  if (currentIndex >= cards.length) {
-    const accuracy = Math.round((correctCount / cards.length) * 100);
+  if (studyCards.length === 0) {
+    return <div className="text-center p-8">Loading...</div>;
+  }
+
+  if (currentIndex >= studyCards.length) {
+    const accuracy = Math.round((correctCount / studyCards.length) * 100);
     return (
       <div className="text-center space-y-4 p-8">
         <h2 className="text-3xl font-bold">Session Complete!</h2>
         <p className="text-xl">
-          Score: {correctCount}/{cards.length} ({accuracy}%)
+          Score: {correctCount}/{studyCards.length} ({accuracy}%)
         </p>
         <Button onClick={() => window.location.reload()}>Study Again</Button>
       </div>
     );
   }
 
-  const currentCard = cards[currentIndex];
+  const currentCard = studyCards[currentIndex];
 
   return (
     <div className="space-y-6">
       <div className="text-sm text-muted-foreground">
-        Question {currentIndex + 1} of {cards.length}
+        Question {currentIndex + 1} of {studyCards.length}
       </div>
 
       <div className={`bg-card border rounded-lg p-8 transition-opacity duration-300 ${isTransitioning ? 'opacity-0' : 'opacity-100'}`}>
@@ -201,54 +217,46 @@ const LearnMode = memo(({ cards, setId }: LearnModeProps) => {
 
         {!showResult ? (
           <div className="space-y-4">
-            <Input
-              ref={inputRef}
-              key={inputKey}
-              value={userAnswer}
-              onChange={(e) => setUserAnswer(e.target.value)}
-              onKeyPress={(e) => e.key === 'Enter' && userAnswer.trim() && checkAnswer()}
-              placeholder="Type your answer..."
-              autoFocus
-            />
-            <Button onClick={checkAnswer} disabled={!userAnswer.trim()}>
-              Check Answer
-            </Button>
-            
-            {mcqOptions.length > 0 && (
+            {currentCard.questionMode === 'typing' ? (
               <>
-                <div className="relative">
-                  <div className="absolute inset-0 flex items-center">
-                    <span className="w-full border-t" />
-                  </div>
-                  <div className="relative flex justify-center text-xs uppercase">
-                    <span className="bg-card px-2 text-muted-foreground">or choose</span>
-                  </div>
-                </div>
-                <div className="grid grid-cols-1 gap-3">
-                  {mcqOptions.map((option, index) => (
-                    <Button
-                      key={index}
-                      onClick={() => handleMCQAnswer(option)}
-                      variant="outline"
-                      className="h-auto py-4 px-6 text-left justify-start whitespace-normal"
-                    >
-                      {option}
-                    </Button>
-                  ))}
-                </div>
+                <Input
+                  ref={inputRef}
+                  key={inputKey}
+                  value={userAnswer}
+                  onChange={(e) => setUserAnswer(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && userAnswer.trim() && checkAnswer()}
+                  placeholder="Type your answer..."
+                  autoFocus
+                />
+                <Button onClick={checkAnswer} disabled={!userAnswer.trim()}>
+                  Check Answer
+                </Button>
               </>
+            ) : (
+              <div className="grid grid-cols-1 gap-3">
+                {mcqOptions.map((option, index) => (
+                  <Button
+                    key={index}
+                    onClick={() => handleMCQAnswer(option)}
+                    variant="outline"
+                    className="h-auto py-4 px-6 text-left justify-start whitespace-normal"
+                  >
+                    {option}
+                  </Button>
+                ))}
+              </div>
             )}
           </div>
         ) : (
           <div className="space-y-4">
-            {answerMethod === 'typing' && userAnswer && (
+            {currentCard.questionMode === 'typing' && userAnswer && (
               <div className="p-3 border rounded">
                 <p className="text-sm text-muted-foreground">Your typed answer:</p>
                 <p className="text-lg font-medium">{userAnswer}</p>
               </div>
             )}
             
-            {mcqOptions.length > 0 && (
+            {currentCard.questionMode === 'mcq' && mcqOptions.length > 0 && (
               <div className="grid grid-cols-1 gap-3">
                 {mcqOptions.map((option, index) => {
                   const isSelected = option === selectedOption;
@@ -301,7 +309,7 @@ const LearnMode = memo(({ cards, setId }: LearnModeProps) => {
             )}
             
             <Button onClick={handleNext}>
-              {currentIndex === cards.length - 1 ? 'Finish' : 'Next Card'}
+              {currentIndex === studyCards.length - 1 ? 'Finish' : 'Next Card'}
             </Button>
           </div>
         )}
